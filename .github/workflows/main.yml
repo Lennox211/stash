@@ -1,0 +1,73 @@
+name: Build Mod
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Findet automatisch den Ordner, in dem settings.gradle liegt
+      # (egal ob direkt im Repository oder in einem Unterordner)
+      - name: Projektordner finden
+        id: find
+        shell: bash
+        run: |
+          echo "Dateien im Repository:"
+          find . -maxdepth 3 -not -path './.git/*' | head -n 60
+          FILE=$(find . -name settings.gradle -not -path './.git/*' | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "FEHLER: settings.gradle wurde im Repository nicht gefunden. Es wurden nicht alle Dateien hochgeladen."
+            exit 1
+          fi
+          DIR=$(dirname "$FILE")
+          echo "Projektordner: $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Mod bauen
+        working-directory: ${{ steps.find.outputs.dir }}
+        shell: bash
+        run: gradle build --no-daemon 2>&1 | tee build-log.txt
+
+      - name: Fehler anzeigen
+        if: failure()
+        working-directory: ${{ steps.find.outputs.dir }}
+        shell: bash
+        run: |
+          echo "=============== HIER IST DER FEHLER ==============="
+          grep -n -B3 -A25 "What went wrong" build-log.txt || tail -n 80 build-log.txt
+          echo "=============== ENDE ==============="
+
+      - name: Gebaute Dateien anzeigen
+        if: always()
+        working-directory: ${{ steps.find.outputs.dir }}
+        shell: bash
+        run: ls -la build/libs || true
+
+      - name: Jar hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: stash-esp-jar
+          path: |
+            ${{ steps.find.outputs.dir }}/build/libs/*.jar
+            !${{ steps.find.outputs.dir }}/build/libs/*-sources.jar
+          if-no-files-found: error
+
+      - name: Log hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ${{ steps.find.outputs.dir }}/build-log.txt
+          if-no-files-found: warn
