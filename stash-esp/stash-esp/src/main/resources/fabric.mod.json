@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "stashesp",
+  "version": "${version}",
+  "name": "Stash ESP",
+  "description": "Zeigt Kisten, Enderkisten, Fässer, Shulker, Trichter, Spender, Schienen, Redstone-Teile und Rüstungsständer durch Wände (gelbe Umrandung + Linie), Reichweite 32 Chunks.",
+  "authors": ["you"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["de.stashesp.StashEspClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.1",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
